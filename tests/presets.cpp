@@ -16,7 +16,7 @@ int main() {
     double si = 0; for (int i = SR; i < N; ++i) si += l[i] * l[i] + r[i] * r[i];
     for (uint32_t p = 0; p < kNumPresets; ++p) {
         std::unique_ptr<Engine> e(new Engine()); for (uint32_t k = 0; k < kParamCount; ++k) e->p[k] = presets()[p].v[k]; e->setSampleRate(SR);
-        if (presets()[p].v[kMidiTrigger] > 0.5f) e->noteOn(60);
+        if (presets()[p].v[kMidiTrigger] > 0.5f && (int)presets()[p].v[kStyle] != kDucking) e->noteOn(60);   // a held note ducks a ducker fully
         std::vector<float> L(N), R(N); for (int i = 0; i < N; i += 512) e->process(l.data() + i, r.data() + i, sc.data() + i, sc.data() + i, L.data() + i, R.data() + i, std::min(512, N - i));
         double ss = 0; float pk = 0; bool nf = false;
         for (int i = SR; i < N; ++i) { ss += L[i] * L[i] + R[i] * R[i]; pk = std::max(pk, std::max(std::fabs(L[i]), std::fabs(R[i]))); nf |= !std::isfinite(L[i]); }

@@ -99,7 +99,7 @@ static std::vector<Ctl> buildControls() {
 static const std::vector<Ctl>& controls() { static std::vector<Ctl> c = buildControls(); return c; }
 
 static const char* const* segLabels(uint32_t p, int& n) {
-    static const char* const style[] = { "CLASSIC", "CLEAN", "VOCAL", "GUITAR", "UPWARD" };
+    static const char* const style[] = { "CLASSIC", "CLEAN", "VOCAL", "GUITAR", "UPWARD", "DUCKING" };
     static const char* const os[] = { "OFF", "2X", "4X" };
     static const char* const chm[] = { "STEREO", "MID/SIDE" };
     static const char* const sc[] = { "INTERNAL", "EXTERNAL" };
@@ -117,7 +117,7 @@ static const char* const* segLabels(uint32_t p, int& n) {
 static constexpr float PS_X = 318.f, PS_Y = 20.f, PS_W = 220.f, PS_H = 28.f, PS_ARROW = 28.f;
 static constexpr float A_X = 548.f, AB_W = 30.f, COPY_X = 612.f, COPY_W = 46.f;
 static constexpr float UNDO_X = 668.f, REDO_X = 720.f, UR_W = 48.f, LEARN_X = 778.f, LEARN_W = 66.f, MIDI_X = 848.f, MIDI_W = 48.f, HELP_X = 902.f, HELP_W = 48.f;
-static constexpr float PM_COLW = 160.f, PM_ROW = 23.f, PM_HEAD = 22.f, PM_PAD = 8.f;
+static constexpr float PM_COLW = 146.f, PM_ROW = 23.f, PM_HEAD = 22.f, PM_PAD = 8.f;
 static constexpr int HIST = 1000;                  // 10 s at 100 points per second
 
 class SlateUI : public UI {
@@ -220,6 +220,7 @@ protected:
     // ---- formatting ---------------------------------------------------------
     int style() const { return (int)clampf(std::round(val[kStyle]), 0, kNumStyles - 1); }
     bool upward() const { return style() == kUpward; }
+    bool ducking() const { return style() == kDucking; }
     bool expert() const { return val[kExpert] > 0.5f; }
     void fmt(uint32_t p, char* b, size_t n) const {
         const float v = val[p];
@@ -302,7 +303,7 @@ protected:
         beginPath(); moveTo(19, 31); lineTo(42, 25.5f); moveTo(21, 38); lineTo(44, 32.5f); strokeColor(withAlpha(C_ACC, 0.6f)); strokeWidth(1); stroke();
         fontSize(22); textLetterSpacing(9); fillColor(C_TEXT); textAlign(ALIGN_LEFT | ALIGN_MIDDLE); text(56, 34, "SLATE", nullptr);
         fontSize(9.5f); textLetterSpacing(2.5f); fillColor(C_DIM); text(186, 29, "GATE / EXPANDER", nullptr);
-        fontSize(7); textLetterSpacing(1.1f); fillColor(C_FAINT); text(186, 41, "EPSILON AUDIO 1.0", nullptr);
+        fontSize(7); textLetterSpacing(1.1f); fillColor(C_FAINT); text(186, 41, "EPSILON AUDIO 2.0", nullptr);
         drawPresetBar();
         for (int k = 0; k < 2; ++k) {
             const float x = A_X + k * AB_W; const bool on = abSlot == k, hot = hoverHeader == 6 + k;
@@ -395,25 +396,28 @@ protected:
         const float R = rangeDb(), step = R <= 30 ? 6.f : (R <= 60 ? 12.f : 18.f);
         beginPath(); for (float d = -R + step; d < 0; d += step) { moveTo(tfX(d), TY + 2); lineTo(tfX(d), TY + TS - 2); moveTo(TX + 2, tfY(d)); lineTo(TX + TS - 2, tfY(d)); }
         strokeColor(Color(255, 255, 255, 7 / 255.f)); strokeWidth(1); stroke();
-        beginPath(); moveTo(tfX(-R), tfY(-R)); lineTo(tfX(0), tfY(0)); strokeColor(C_FAINT); stroke();
+        if (!ducking()) { beginPath(); moveTo(tfX(-R), tfY(-R)); lineTo(tfX(0), tfY(0)); strokeColor(C_FAINT); stroke(); }
         scissor(TX + 1, TY + 1, TS - 2, TS - 2);
         const float thr = val[kThreshold]; const StyleDef sd = styleDef(style());
         const float tx = tfX(thr); const bool hot = hoverTf || dragTf;
         for (float y = TY + 3; y < TY + TS; y += 8) { beginPath(); moveTo(tx, y); lineTo(tx, y + 4); strokeColor(withAlpha(C_TEXT, hot ? 0.8f : 0.3f)); strokeWidth(1); stroke(); }
         beginPath();
-        for (int i = 0; i <= 120; ++i) { const float in = -R + R * i / 120.f, out = in + staticGain(in, thr, val[kRatio], val[kRange], val[kKnee] + sd.kneeExtra, sd.upward);
+        // a gate maps input level to output level; the ducker maps the key's level to the gain it applies (0 dB at the top)
+        const bool dk = sd.duck;
+        for (int i = 0; i <= 120; ++i) { const float in = -R + R * i / 120.f, gn = staticGain(in, thr, val[kRatio], val[kRange], val[kKnee] + sd.kneeExtra, sd.upward, dk), out = dk ? gn : in + gn;
             if (!i) moveTo(tfX(in), tfY(out)); else lineTo(tfX(in), tfY(out)); }
         strokeColor(C_ACC); strokeWidth(2); stroke();
-        if (detDb > -R) { beginPath(); circle(tfX(detDb), tfY(detDb + gainNow), 3.5f); fillColor(C_TEXT); fill(); }
+        if (detDb > -R) { beginPath(); circle(tfX(detDb), tfY(dk ? gainNow : detDb + gainNow), 3.5f); fillColor(C_TEXT); fill(); }
         resetScissor();
-        fontSize(7); textLetterSpacing(1.2f); textAlign(ALIGN_LEFT | ALIGN_TOP); fillColor(C_FAINT); text(TX + 5, TY + 5, "OUT", nullptr);
-        textAlign(ALIGN_RIGHT | ALIGN_BOTTOM); text(TX + TS - 5, TY + TS - 4, "IN", nullptr);
+        fontSize(7); textLetterSpacing(1.2f); textAlign(ALIGN_LEFT | ALIGN_TOP); fillColor(C_FAINT); text(TX + 5, TY + 5, dk ? "GAIN" : "OUT", nullptr);
+        textAlign(ALIGN_RIGHT | ALIGN_BOTTOM); text(TX + TS - 5, TY + TS - 4, dk ? "KEY" : "IN", nullptr);
     }
     void drawState() {
         displayBox(SX, SY, SW, SH);
         const float g = gainNow, R = std::max(1.f, val[kRange]);
         const char* st; Color c;
         if (upward()) { st = g > 0.5f ? "BOOSTING" : "IDLE"; c = g > 0.5f ? C_BOOST : C_DIM; }
+        else if (ducking()) { st = g < -1.f ? "DUCKING" : "IDLE"; c = g < -1.f ? C_CUT : C_DIM; }
         else if (g > -1.f) { st = "OPEN"; c = C_BOOST; }
         else if (g > -R + 1.f) { st = "CLOSING"; c = C_DET; }
         else { st = "CLOSED"; c = C_CUT; }
@@ -424,6 +428,11 @@ protected:
         fontSize(18); textLetterSpacing(0.5f); fillColor(C_TEXT); text(SX + 16, SY + 64, b, nullptr);
         snprintf(b, sizeof b, "hears %s", detDb > -119 ? (std::to_string((int)std::round(detDb)) + " dB").c_str() : "silence");
         fontSize(9); textLetterSpacing(0.6f); fillColor(C_DIM); text(SX + 16, SY + 86, b, nullptr);
+        if (ducking()) {      // what the ducker listens to
+            const bool ext = val[kSidechain] > 0.5f;
+            fontSize(7.5f); textLetterSpacing(1.2f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE); fillColor(ext ? C_DET : C_FAINT);
+            text(SX + SW - 10, SY + 64, ext ? "KEY: SIDECHAIN" : "KEY: INPUT", nullptr);
+        }
         if (val[kMidiTrigger] > 0.5f) { fontSize(7.5f); textLetterSpacing(1.2f); textAlign(ALIGN_RIGHT | ALIGN_MIDDLE); fillColor(C_ACC); text(SX + SW - 10, SY + 86, "MIDI", nullptr); }
     }
     void drawMainPanel() {

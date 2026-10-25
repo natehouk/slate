@@ -52,7 +52,7 @@ inline const ParamDef& paramDef(uint32_t i) {
 }
 
 inline const char* const* enumLabels(uint32_t p, int& count) {
-    static const char* const style[] = { "Classic", "Clean", "Vocal", "Guitar", "Upward" };
+    static const char* const style[] = { "Classic", "Clean", "Vocal", "Guitar", "Upward", "Ducking" };
     static const char* const os[] = { "Off", "2x", "4x" };
     static const char* const chm[] = { "Stereo", "Mid/Side" };
     static const char* const sc[] = { "Internal", "External" };

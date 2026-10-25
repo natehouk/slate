@@ -11,8 +11,8 @@ struct PV { uint32_t id; float v; };
 struct PresetDef { const char* name; const char* category; const PV* pv; };
 struct Preset { const char* name; const char* category; float v[kParamCount]; };
 
-static const char* const kCategories[] = { "Drums", "Vocals", "Instruments", "Mix & Repair", "Creative" };
-static constexpr int kNumCategories = 5;
+static const char* const kCategories[] = { "Drums", "Vocals", "Instruments", "Mix & Repair", "Creative", "Ducking" };
+static constexpr int kNumCategories = 6;
 
 #define END { kParamCount, 0 }
 namespace pv {
@@ -53,6 +53,14 @@ static const PV trance[]    = { {kStyle,kClean}, {kSidechain,1}, {kThreshold,-24
 static const PV midiGate[]  = { {kStyle,kClean}, {kMidiTrigger,1}, {kThreshold,0}, {kRatio,100}, {kRange,80}, {kAttack,0.5f}, {kHold,0}, {kRelease,40}, {kKnee,0}, END };
 static const PV stutter[]   = { {kStyle,kClean}, {kMidiTrigger,1}, {kThreshold,0}, {kRatio,100}, {kRange,80}, {kAttack,0.05f}, {kHold,0}, {kRelease,5}, {kKnee,0}, END };
 static const PV swell[]     = { {kStyle,kClassic}, {kThreshold,-40}, {kRatio,100}, {kRange,60}, {kAttack,120}, {kHold,0}, {kRelease,40}, {kKnee,0}, END };
+// ---------------------------------------------------------------- Ducking (2.0): the sidechain turns the signal down
+static const PV voDuck[]    = { {kStyle,kDucking}, {kSidechain,1}, {kThreshold,-38}, {kRatio,4}, {kRange,12}, {kAttack,15}, {kHold,150}, {kRelease,500}, {kKnee,8}, {kScHpOn,1}, {kScHpFreq,120}, END };
+static const PV bedDuck[]   = { {kStyle,kDucking}, {kSidechain,1}, {kThreshold,-42}, {kRatio,3}, {kRange,18}, {kAttack,40}, {kHold,300}, {kRelease,900}, {kKnee,12}, END };
+static const PV kickDuck[]  = { {kStyle,kDucking}, {kSidechain,1}, {kThreshold,-30}, {kRatio,100}, {kRange,14}, {kAttack,0.5f}, {kHold,10}, {kRelease,140}, {kKnee,0}, {kScLpOn,1}, {kScLpFreq,150}, END };
+static const PV pump[]      = { {kStyle,kDucking}, {kSidechain,1}, {kThreshold,-34}, {kRatio,100}, {kRange,30}, {kAttack,0.2f}, {kHold,30}, {kRelease,260}, {kKnee,0}, {kScLpOn,1}, {kScLpFreq,150}, END };
+static const PV bassDuck[]  = { {kStyle,kDucking}, {kSidechain,1}, {kThreshold,-28}, {kRatio,8}, {kRange,8}, {kAttack,1}, {kHold,20}, {kRelease,90}, {kKnee,4}, {kScLpOn,1}, {kScLpFreq,120}, END };
+static const PV midiDuck[]  = { {kStyle,kDucking}, {kMidiTrigger,1}, {kThreshold,0}, {kRatio,100}, {kRange,40}, {kAttack,1}, {kHold,0}, {kRelease,200}, {kKnee,0}, END };
+static const PV selfDuck[]  = { {kStyle,kDucking}, {kThreshold,-14}, {kRatio,2}, {kRange,10}, {kAttack,2}, {kHold,30}, {kRelease,250}, {kKnee,10}, END };
 } // namespace pv
 #undef END
 
@@ -70,6 +78,10 @@ static const PresetDef kPresetDefs[] = {
     { "Upward Punch", "Creative", pv::punch }, { "Live Drum Lift", "Creative", pv::liveDrums }, { "Key Gate (SC)", "Creative", pv::duckKey },
     { "Trance Gate (SC)", "Creative", pv::trance }, { "MIDI Gate", "Creative", pv::midiGate }, { "MIDI Stutter", "Creative", pv::stutter },
     { "Slow Swell", "Creative", pv::swell },
+    // 2.0 (appended, so the program numbers of the presets above stay the same)
+    { "Voice-Over Duck (SC)", "Ducking", pv::voDuck }, { "Music Bed Duck (SC)", "Ducking", pv::bedDuck }, { "Kick Duck (SC)", "Ducking", pv::kickDuck },
+    { "Pump (SC)", "Ducking", pv::pump }, { "Bass Under Kick (SC)", "Ducking", pv::bassDuck }, { "MIDI Duck", "Ducking", pv::midiDuck },
+    { "Peak Tamer", "Ducking", pv::selfDuck },
 };
 static constexpr uint32_t kNumPresets = sizeof(kPresetDefs) / sizeof(kPresetDefs[0]);
 

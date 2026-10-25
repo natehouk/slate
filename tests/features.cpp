@@ -110,7 +110,29 @@ int main() {
       run(*e, l, r, L, R); V side(N), mid(N); for (int i = 0; i < N; ++i) { side[i] = 0.5f * (L[i] - R[i]); mid[i] = 0.5f * (L[i] + R[i]); }
       const double sideG = rmsDb(side, N / 2, N) - rmsDb(sd, N / 2, N), midG = rmsDb(mid, N / 2, N) - rmsDb(m, N / 2, N);
       check(sideG < -35 && std::fabs(midG) < 0.2, "mid/side, unlinked: quiet side gated %.1f dB, loud mid %.2f dB", sideG, midG); }
-    // 12. presets stay finite
+    // 12. ducking (2.0)
+    { // depth: a key above the threshold ducks by Range (100:1), or by (ratio-1) dB per dB over the threshold
+      auto duckGain = [&](float keyDb, float ratio, float range, float thr = -30) {
+          EP e = make(kDucking); e->p[kSidechain] = 1; e->p[kThreshold] = thr; e->p[kRatio] = ratio; e->p[kRange] = range; e->setSampleRate(fs);
+          V s = sine(1000, -20, N), key = sine(200, keyDb, N), L, R; run(*e, s, s, L, R, &key); return rmsDb(L, N / 2, N) - rmsDb(s, N / 2, N); };
+      const double full = duckGain(-10, 100, 18), none = duckGain(-50, 100, 18), half = duckGain(-24, 2, 40);
+      check(std::fabs(full + 18) < 0.3 && std::fabs(none) < 0.1, "ducking, 100:1: key 20 dB over the threshold ducks %.2f dB (range 18); key under it: %.2f dB", full, none);
+      check(std::fabs(half + 6) < 0.6, "ducking, 2:1: key 6 dB over the threshold ducks %.2f dB (expect -6)", half);
+      // the dynamics: attack turns it down when the key arrives, hold keeps it down, release brings it back
+      EP e = make(kDucking); e->p[kSidechain] = 1; e->p[kThreshold] = -30; e->p[kRatio] = 100; e->p[kRange] = 20;
+      e->p[kAttack] = 5; e->p[kHold] = 100; e->p[kRelease] = 50; e->setSampleRate(fs);
+      V s = sine(1000, -20, N), key(N), L, R; for (int i = 0; i < N; ++i) key[i] = (i >= 12000 && i < 24000 ? 0.3f : 0.f) * std::sin(2 * kPi * 200 * i / fs);
+      run(*e, s, s, L, R, &key);
+      auto g = [&](int i) { return rmsDb(L, i - 96, i) - rmsDb(s, i - 96, i); };
+      const double pre = g(11900), a2 = g(12000 + 96), a30 = g(12000 + 1440), h50 = g(24000 + 2400), back = g(24000 + 4800 + 14400);
+      check(std::fabs(pre) < 0.1 && a2 > -14 && a30 < -19, "ducking attack 5 ms: %.2f dB before the key, %.1f dB 2 ms in, %.1f dB 30 ms in", pre, a2, a30);
+      check(h50 < -19 && std::fabs(back) < 0.3, "ducking hold 100 ms: still %.1f dB 50 ms after the key stops; back to %.2f dB 300 ms after the hold", h50, back);
+      // starts at unity (no dip before the key has been heard), a held MIDI note ducks fully
+      EP m = make(kDucking); m->p[kMidiTrigger] = 1; m->p[kThreshold] = 0; m->p[kRatio] = 100; m->p[kRange] = 30; m->p[kAttack] = 0.5f; m->p[kRelease] = 20; m->setSampleRate(fs);
+      run(*m, s, s, L, R, nullptr, [](Engine& en, size_t i) { if (i == 12032) en.noteOn(60); if (i == 24000) en.noteOff(60); });
+      const double mb = rmsDb(L, 0, 4800) - rmsDb(s, 0, 4800), md = rmsDb(L, 16000, 23900) - rmsDb(s, 16000, 23900), ma = rmsDb(L, 40000, N) - rmsDb(s, 40000, N);
+      check(std::fabs(mb) < 0.1 && std::fabs(md + 30) < 0.3 && std::fabs(ma) < 0.1, "MIDI duck: %.2f dB from the start, %.2f dB while a note is held, %.2f dB after", mb, md, ma); }
+    // 13. presets stay finite
     { bool ok = true; for (uint32_t i = 0; i < kNumPresets; ++i) { EP e(new Engine()); std::copy(presets()[i].v, presets()[i].v + kParamCount, e->p); ok &= std::isfinite(gainOf(*e, 1000, -20, 12000)); }
       check(ok, "all %.0f presets produce finite output", kNumPresets); }
     printf("\n%s (%d failure%s)\n", fails ? "FAILED" : "ALL PASSED", fails, fails == 1 ? "" : "s");

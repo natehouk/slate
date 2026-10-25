@@ -1,6 +1,6 @@
 # Slate
 
-**A gate and expander with five styles, sidechain filters and MIDI triggering, for macOS, Windows and Linux (VST3 · AU · CLAP · VST2).**
+**A gate, expander and ducker with six styles, sidechain filters and MIDI triggering, for macOS, Windows and Linux (VST3 · AU · CLAP · VST2).**
 
 Part of **[Epsilon Audio](https://github.com/natehouk/epsilon-plugins)**, a family of free, open-source plugins: Monolith, Caldera, Obsidian, Strata, Basalt, Gneiss, Mica, Flint, Granite, Magma, Schist, Slate, Talc, Geode and Malachite.
 
@@ -48,7 +48,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Slate*
 
 ## Features
 
-**Five styles**
+**Six styles**
 
 | Style | Character |
 |---|---|
@@ -57,6 +57,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Slate*
 | Vocal | Slower RMS detection, softer knee, 4 dB hysteresis against chatter |
 | Guitar | Peak detection, 8 dB hysteresis, closes quickly as notes die away |
 | Upward | Upward expansion: lifts what rises above the threshold |
+| Ducking | Turns the signal down while the key (usually the sidechain) is above the threshold: music under a voice, bass under the kick, sidechain pumping |
 
 **Controls**
 - Threshold, ratio (1:1 to 100:1), range (up to 80 dB) and soft knee.
@@ -82,16 +83,18 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Slate*
 - A/B with copy, undo/redo for every edit, MIDI Learn.
 - Smoothed, sample-accurate automation.
 - Resizable interface.
-- **32 factory presets** in five categories, plus user presets.
+- **39 factory presets** in six categories, including seven ducking presets, plus user presets.
 - **Hover tips** everywhere, a **HELP window**, and a **[full manual](docs/MANUAL.md)** (also in every release zip as `Slate-Manual.html`).
 
 ![Expert mode](screenshot-expert.png)
+
+![Ducking](screenshot-ducking.png)
 
 ### Compared with FabFilter Pro-G (2011)
 
 | Pro-G | Slate |
 |---|---|
-| Five algorithms: Classic, Clean, Vocal, Guitar and upward expansion | ✓ |
+| Algorithms: Classic, Clean, Vocal, Guitar, upward expansion and Ducking (current Pro-G) | ✓ all six |
 | Program-dependent attack and release curves | ✓ per style (gentler closing after long openings, hysteresis, fast close on decaying notes) |
 | Threshold, ratio, range, attack, hold, release, knee | ✓ |
 | Optional look-ahead up to 10 ms; zero-latency operation | ✓ |
@@ -102,7 +105,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Slate*
 | Up to 4× linear-phase oversampling | ✓ |
 | MIDI triggering | ✓ |
 | MIDI Learn, undo/redo, A/B, smooth parameter changes, help with interactive hints | ✓ hover tips, help pages and full manual |
-| Factory presets | 32 factory presets plus user presets |
+| Factory presets | 39 factory presets plus user presets |
 | Pro Tools (RTAS/AAX) | Not supported (needs Avid's SDK and signing) |
 
 ## Build from source
@@ -123,7 +126,8 @@ GitHub Actions builds all three platforms on every push. The macOS build is univ
 cd tests
 g++ -O2 -std=c++11 features.cpp -o features && ./features   # open/closed levels per style, ratio, range, knee, upward expansion, attack/hold/release,
                                                             # hysteresis, latency and look-ahead, oversampling, external sidechain, sidechain level,
-                                                            # filters and audition, MIDI trigger, wet/dry/pan, link, mid/side
+                                                            # filters and audition, MIDI trigger, wet/dry/pan, link, mid/side,
+                                                            # ducking depth, ratio and timing, MIDI ducking
 g++ -O2 -std=c++11 fuzz.cpp -o fuzz && ./fuzz               # random parameters, MIDI and sidechain at 44.1-192 kHz: always finite
 g++ -O2 -std=c++11 presets.cpp -o presets && ./presets      # plays a drum loop with a noise floor through every preset
 g++ -O3 -std=c++11 bench.cpp -o bench && ./bench            # CPU at 1x, 2x and 4x
@@ -133,7 +137,7 @@ Slate takes about 1.2% of one CPU core (2.2% at 4× oversampling).
 
 Release checks:
 - Steinberg's VST3 validator passes 47/47.
-- The interface is exercised with scripted input and a live drum-and-bass test mix: presets, dragging the threshold, expert mode, tips and help.
+- The interface is exercised with scripted input and a live drum-and-bass test mix: presets, dragging the threshold, expert mode, ducking keyed from the sidechain, tips and help.
 
 ## Source layout
 
@@ -147,6 +151,11 @@ Release checks:
 | `plugins/Slate/SlatePlugin.hpp/.cpp` | Plugin wrapper: parameters, sidechain, MIDI triggering, latency, MIDI Learn |
 | `plugins/Slate/SlateUI.cpp` | Custom vector interface (NanoVG) |
 | `docs/MANUAL.md` | User manual (`Slate-Manual.html` is generated from it with pandoc) |
+
+## Changelog
+
+- **2.0:** DUCKING style: turns the signal down while the key is above the threshold, with its own transfer curve and gate-state readout, MIDI ducking, and seven ducking presets. Sessions and automation from 1.0 load unchanged.
+- **1.0:** First release.
 
 ## License
 

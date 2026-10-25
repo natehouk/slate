@@ -1,12 +1,13 @@
-# Slate 1.0 — User Manual
+# Slate 2.0 — User Manual
 
 Slate is a gate and expander. It turns the signal down when it falls below a threshold. Typical uses:
 
 - removing bleed, hiss, hum and room sound between notes and hits
 - tightening drums
 - cutting reverb tails short
+- ducking: turning music down under a voice, or a bass under the kick
 
-Its UPWARD style does the opposite: it lifts what rises above the threshold, for extra punch. Slate has five styles, look‑ahead, mid/side processing, an external sidechain with filters and audition, MIDI note triggering, separate wet and dry levels, and up to 4× oversampling.
+Its UPWARD style lifts what rises above the threshold, for extra punch, and its DUCKING style turns the signal down while a key signal is loud. Slate has six styles, look‑ahead, mid/side processing, an external sidechain with filters and audition, MIDI note triggering, separate wet and dry levels, and up to 4× oversampling.
 
 Slate runs as VST3, AU, CLAP and VST2 on macOS, Windows and Linux.
 
@@ -59,11 +60,11 @@ Rescan plugins in your DAW. Slate appears under **Epsilon Audio** as a dynamics 
 - **Level display** (top left), the last ten seconds:
   - the input in grey and the output in blue
   - the level the gate hears as a yellow line
-  - the gain change from the top: red where the gate turns the signal down, green where UPWARD boosts it
+  - the gain change from the top: red where the gate (or the ducker) turns the signal down, green where UPWARD boosts it
   - the threshold as a dashed line you can drag
 - **Meters:** input, gain change and output.
-- **Transfer curve** (top right): input level against output level. The dot shows where the gate is right now.
-- **Gate state:** OPEN, CLOSING or CLOSED (or BOOSTING / IDLE in UPWARD style), the gain change in dB and the level the gate hears.
+- **Transfer curve** (top right): input level against output level. In DUCKING style it shows the key's level against the gain applied instead. The dot shows where the gate is right now.
+- **Gate state:** OPEN, CLOSING or CLOSED (BOOSTING / IDLE in UPWARD style, DUCKING / IDLE in DUCKING style), the gain change in dB and the level the gate hears. In DUCKING style it also shows whether the key is the input or the sidechain.
 - **Main panel:** style, threshold, range, ratio, knee, lookahead, attack, hold and release, with a description of the current style.
 - **Side panel:**
   - channels, link, oversampling, MIDI trigger, display range and EXPERT
@@ -99,8 +100,33 @@ A fresh instance starts closed, so nothing slips through before the gate has lis
 | **VOCAL** | RMS, 12 ms | A softer knee and 4 dB of hysteresis: once open, it closes only 4 dB below the threshold, so breaths and word endings don't make it chatter. Release is slightly slower. |
 | **GUITAR** | peak | 8 dB of hysteresis, and it closes faster once a note is dying away. Tight gating for high‑gain guitars. |
 | **UPWARD** | RMS, 4 ms | Upward expansion: parts above the threshold are boosted by (level − threshold) × (ratio − 1), up to Range, at most 36 dB. Nothing below the threshold changes. |
+| **DUCKING** | peak | The opposite of a gate: while the key is above the threshold, the signal is turned down by (level − threshold) × (ratio − 1), up to Range. See section 4a. |
 
 For VOCAL and GUITAR the display shows a faint second line where the gate closes again.
+
+### 4a. Ducking
+
+![Ducking](../screenshot-ducking.png)
+
+A ducker turns one signal down while another one plays: music under a voice-over, a bass under the kick drum, a pad that pumps in time with the beat.
+
+1. Put Slate on the track to be turned down (the music, the bass, the pad).
+2. Route the key track (the voice, the kick) to Slate's sidechain input in your DAW.
+3. Choose **DUCKING**, turn on **EXPERT** and set **SIDECHAIN** to **EXTERNAL**. The gate state shows *KEY: SIDECHAIN*.
+4. Set **THRESHOLD** just below the key's level and **RANGE** to how far the music should go down.
+
+The controls keep their meaning, seen from the key's side:
+
+- **RATIO:** 100:1 ducks by the full range as soon as the key crosses the threshold. Lower ratios duck more as the key gets louder: at 2:1, 1 dB per dB over the threshold.
+- **ATTACK:** how fast the signal goes down when the key arrives.
+- **HOLD:** how long it stays down after the key stops.
+- **RELEASE:** how fast it comes back.
+- The sidechain **HIGH PASS** and **LOW PASS** pick what part of the key counts: a 150 Hz low-pass makes only the kick, not the hi-hats, duck a bass.
+- With **MIDI TRIGGER**, a held note ducks fully: duck from a MIDI clip without any key audio (see *MIDI Duck*).
+
+With SIDECHAIN on INTERNAL the signal ducks itself whenever it is loud: a gentle, slow peak tamer.
+
+A fresh ducker starts at unity, so nothing dips before it has heard the key.
 
 ---
 
@@ -108,14 +134,14 @@ For VOCAL and GUITAR the display shows a faint second line where the gate closes
 
 | Control | Range | What it does |
 |---|---|---|
-| **THRESHOLD** | −80 – 0 dB | Where the gate opens. Also: drag the dashed line in the display, drag in the transfer curve, or use the mouse wheel over either. |
-| **RANGE** | 0 – 80 dB | How far the gate turns the signal down when closed (UPWARD: the most it boosts). |
+| **THRESHOLD** | −80 – 0 dB | Where the gate opens (DUCKING: where ducking starts). Also: drag the dashed line in the display, drag in the transfer curve, or use the mouse wheel over either. |
+| **RANGE** | 0 – 80 dB | How far the gate turns the signal down when closed (UPWARD: the most it boosts; DUCKING: how deep it ducks). |
 | **RATIO** | 1:1 – 100:1 | How hard it acts past the threshold. |
 | **KNEE** | 0 – 30 dB | How gradually it starts to act. |
 | **LOOKAHEAD** | 0 – 10 ms | Opens before a hit arrives, so the first transient isn't cut. Adds that much latency. At 0 ms (and no oversampling) Slate has no latency at all. |
-| **ATTACK** | 0.005 – 250 ms | How fast the gate opens. Long attacks make swells. |
-| **HOLD** | 0 – 500 ms | How long it stays open after the signal drops below the threshold. |
-| **RELEASE** | 5 ms – 5 s | How fast it closes after the hold. |
+| **ATTACK** | 0.005 – 250 ms | How fast the gate opens. Long attacks make swells. (DUCKING: how fast it ducks.) |
+| **HOLD** | 0 – 500 ms | How long it stays open after the signal drops below the threshold. (DUCKING: how long it stays down after the key stops.) |
+| **RELEASE** | 5 ms – 5 s | How fast it closes after the hold. (DUCKING: how fast the signal comes back.) |
 
 ---
 
@@ -127,6 +153,7 @@ For VOCAL and GUITAR the display shows a faint second line where the gate closes
 - **MIDI TRIGGER:** MIDI notes open the gate.
   - While any note is held, the gate is fully open. When you let go, it closes with its hold and release.
   - Set the threshold to 0 dB to play the gate purely from MIDI: rhythmic gating from a MIDI clip, or live from a keyboard.
+  - In DUCKING style a held note ducks the signal fully instead.
 - **DISPLAY RANGE:** 30, 60 or 90 dB for the level display, meters and transfer curve.
 
 ---
@@ -192,7 +219,7 @@ Click **EXPERT** to show:
 
 ## 12. Presets
 
-32 factory presets in five groups, plus your own:
+39 factory presets in six groups, plus your own:
 
 | Group | Presets |
 |---|---|
@@ -201,8 +228,9 @@ Click **EXPERT** to show:
 | Instruments | High‑Gain Guitar, Metal Chug, Clean Guitar, Bass DI, Synth Tails, Piano Noise Floor |
 | Mix & Repair | Hiss Reducer, Hum Reducer, Bleed Control, Parallel Gate, Gentle Expander, Mid/Side Expander |
 | Creative | Upward Punch, Live Drum Lift, Key Gate (SC), Trance Gate (SC), MIDI Gate, MIDI Stutter, Slow Swell |
+| Ducking | Voice-Over Duck (SC), Music Bed Duck (SC), Kick Duck (SC), Pump (SC), Bass Under Kick (SC), MIDI Duck, Peak Tamer |
 
-Thresholds depend on how loud your material is, so adjust THRESHOLD first. The (SC) presets expect a signal on the sidechain input. The MIDI presets expect MIDI notes.
+Thresholds depend on how loud your material is, so adjust THRESHOLD first. The (SC) presets expect a signal on the sidechain input and switch SIDECHAIN to EXTERNAL. The MIDI presets expect MIDI notes.
 
 - **SAVE CURRENT AS…** stores your own presets, in one of these folders:
   - macOS: `~/Library/Audio/Presets/Epsilon Audio/Slate`
@@ -233,6 +261,8 @@ Thresholds depend on how loud your material is, so adjust THRESHOLD first. The (
 - **Trance gate:** an external sidechain with a rhythmic pattern, ratio 100:1, very short release. Or use MIDI TRIGGER with a MIDI clip (*MIDI Gate*, *MIDI Stutter*).
 - **Parallel gating:** gate hard, then bring back some of the original with DRY.
 - **More punch:** UPWARD with a low ratio (1.3–1.6:1) and a few dB of range; turn WET down to match levels.
+- **Music under a voice-over:** on the music, DUCKING keyed by the voice, ratio 3–4:1, range 10–15 dB, attack 15 ms, hold 150 ms, release around 500 ms (see *Voice-Over Duck*).
+- **Sidechain pump:** on a pad or bass, DUCKING keyed by the kick, ratio 100:1, range 20–30 dB, a 150 Hz sidechain low-pass, very fast attack, release 200–300 ms (see *Pump*).
 
 ---
 
@@ -241,7 +271,7 @@ Thresholds depend on how loud your material is, so adjust THRESHOLD first. The (
 There are 26 parameters: 24 automatable controls and 2 view settings. New parameters are only ever added at the end, so sessions and automation keep working across versions.
 
 - **Main:**
-  - Style
+  - Style (Classic, Clean, Vocal, Guitar, Upward, Ducking)
   - Threshold (−80 – 0 dB), Ratio (1–100), Range (0–80 dB), Knee (0–30 dB)
   - Attack (0.005–250 ms), Hold (0–500 ms), Release (5 ms – 5 s), Lookahead (0–10 ms)
 - **Side panel:** Oversampling, Channel Mode, Stereo Link, MIDI Trigger, MIDI.
@@ -259,6 +289,7 @@ There are 26 parameters: 24 automatable controls and 2 view settings. New parame
 - **Slate doesn't appear in my DAW.** Check the install folders above and rescan plugins. On macOS, run the `xattr` command from section 1.
 - **The gate chatters.** Raise HOLD, lengthen RELEASE, try VOCAL or GUITAR (hysteresis), or soften the KNEE.
 - **The first hit is cut.** Add 1–3 ms of LOOKAHEAD, or shorten ATTACK.
+- **DUCKING does nothing.** The key must be above the threshold: check that a track feeds Slate's sidechain input, that SIDECHAIN is EXTERNAL, and lower THRESHOLD. The yellow detector line shows the key's level.
 - **The external sidechain does nothing.** Route a track to Slate's sidechain input in your DAW and set SIDECHAIN to EXTERNAL in expert mode.
 - **MIDI trigger does nothing.** Turn MIDI TRIGGER on, make sure the MIDI button is on, and route MIDI to Slate's track. With a low threshold, the gate is already open from the audio.
 - **The latency changed.** Lookahead adds up to 10 ms and oversampling adds 32–48 samples. Your host compensates automatically.

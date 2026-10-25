@@ -1,4 +1,4 @@
-// Slate — stereo gate / expander engine: five styles (four downward expanders and an upward one),
+// Slate — stereo gate / expander engine: six styles (four downward expanders, an upward one and a ducker),
 // threshold, ratio, range, knee, attack, hold, release, look-ahead, stereo or mid/side with linking,
 // external sidechain with 48 dB/oct detector filters and audition, MIDI note triggering, separate
 // wet and dry levels, and 2x/4x linear-phase oversampling of the gain stage.
@@ -31,19 +31,20 @@ enum Param : uint32_t {
     kOutLearn, kOutInL, kOutInR, kOutOutL, kOutOutR, kOutGr,
     kParamCount
 };
-enum Style { kClassic, kClean, kVocal, kGuitar, kUpward, kNumStyles };
+enum Style { kClassic, kClean, kVocal, kGuitar, kUpward, kDucking, kNumStyles };   // append-only: the style is saved by index
 static constexpr float kDryOff = -60.f;              // the dry level's bottom position means "off"
 static constexpr float kMaxBoost = 36.f;             // upward expansion never boosts more than this
 
 // per-style detector and behaviour
-struct StyleDef { bool rms; float detMs; float hyst; float kneeExtra; bool upward; };
+struct StyleDef { bool rms; float detMs; float hyst; float kneeExtra; bool upward; bool duck; };
 inline StyleDef styleDef(int s) {
     static const StyleDef d[kNumStyles] = {
-        { true,  4.f, 0.f, 2.f, false },     // Classic: smooth RMS expander, release slows after long openings
-        { false, 8.f, 0.f, 0.f, false },     // Clean: fast peak detector, timing exactly as set
-        { true, 12.f, 4.f, 3.f, false },     // Vocal: slower RMS, 4 dB hysteresis so breaths don't chatter
-        { false, 5.f, 8.f, 0.f, false },     // Guitar: peak detector, wide hysteresis, closes quickly as notes die
-        { true,  4.f, 0.f, 2.f, true } };    // Upward: boosts what rises above the threshold
+        { true,  4.f, 0.f, 2.f, false, false },     // Classic: smooth RMS expander, release slows after long openings
+        { false, 8.f, 0.f, 0.f, false, false },     // Clean: fast peak detector, timing exactly as set
+        { true, 12.f, 4.f, 3.f, false, false },     // Vocal: slower RMS, 4 dB hysteresis so breaths don't chatter
+        { false, 5.f, 8.f, 0.f, false, false },     // Guitar: peak detector, wide hysteresis, closes quickly as notes die
+        { true,  4.f, 0.f, 2.f, true,  false },     // Upward: boosts what rises above the threshold
+        { false, 10.f, 0.f, 0.f, false, true } };   // Ducking: turns the signal down while the (side)chain is above the threshold
     return d[s < 0 ? 0 : (s >= kNumStyles ? kNumStyles - 1 : s)];
 }
 
@@ -54,10 +55,11 @@ inline float pastKnee(float d, float K) {
     if (d >= 0.5f * K) return d;
     const float t = d + 0.5f * K; return t * t / (2.f * K);
 }
-// static gain (dB) for a detector level: negative = attenuation (downward), positive = boost (upward)
-inline float staticGain(float lvl, float thr, float ratio, float range, float knee, bool upward) {
+// static gain (dB) for a detector level: negative = attenuation (downward, ducking), positive = boost (upward)
+inline float staticGain(float lvl, float thr, float ratio, float range, float knee, bool upward, bool duck = false) {
     ratio = std::max(ratio, 1.f); range = std::max(range, 0.f);
     if (upward) return std::min(pastKnee(lvl - thr, knee) * (ratio - 1.f), std::min(range, kMaxBoost));
+    if (duck) return -std::min(pastKnee(lvl - thr, knee) * (ratio - 1.f), range);     // the louder the key, the deeper the duck
     return -std::min(pastKnee(thr - lvl, knee) * (ratio - 1.f), range);
 }
 
@@ -169,7 +171,8 @@ public:
         meterFall = std::exp(-1.f / (0.3f * sr));
         histSamples = std::max(1, (int)(0.01f * sr));
         // start closed (a downward gate shouldn't let a burst of noise through before it has listened)
-        const bool up = styleDef((int)std::round(p[kStyle])).upward;
+        const StyleDef s0 = styleDef((int)std::round(p[kStyle]));
+        const bool up = s0.upward || s0.duck;                 // the upward expander and the ducker start at unity
         for (int c = 0; c < 2; ++c) { gdb[c] = up ? 0.f : -clampf(p[kRange], 0.f, 80.f); holdLeft[c] = 0; det[c] = 0; lvlDb[c] = lvlSlow[c] = -150; }
         configure();
         for (int c = 0; c < 2; ++c) { mIn[c] = mOut[c] = 0; }
@@ -230,14 +233,16 @@ public:
             if (link > 0) { const float mx = std::max(lvlDb[0], lvlDb[1]); for (int c = 0; c < 2; ++c) lvlDb[c] += (mx - lvlDb[c]) * link; }
             for (int c = 0; c < 2; ++c) {
                 // hysteresis: once open, the gate closes only this far below the threshold
-                const float t = sd.upward ? thr : thr - (open[c] ? sd.hyst : 0.f);
-                target[c] = (midiTrig && numHeld > 0) ? (sd.upward ? gdb[c] : 0.f) : staticGain(lvlDb[c], t, ratio, range, knee, sd.upward);
-                if (!sd.upward) open[c] = target[c] > -1.f;
+                const float t = (sd.upward || sd.duck) ? thr : thr - (open[c] ? sd.hyst : 0.f);
+                if (midiTrig && numHeld > 0) target[c] = sd.duck ? -range : (sd.upward ? gdb[c] : 0.f);      // a held note opens the gate, or ducks fully
+                else target[c] = staticGain(lvlDb[c], t, ratio, range, knee, sd.upward, sd.duck);
+                if (!sd.upward && !sd.duck) open[c] = target[c] > -1.f;
             }
             for (int c = 0; c < 2; ++c) {
                 float& g = gdb[c];
-                // "opening" moves towards more gain: attack (linear in level). Closing: hold first, then release (linear in dB).
-                const bool opening = target[c] > g;
+                // a gate's "opening" moves towards more gain: attack (linear in level). Closing: hold first, then release (linear in dB).
+                // A ducker reacts the other way round: attack turns it down when the key arrives; hold, then release, bring it back.
+                const bool opening = sd.duck ? target[c] < g : target[c] > g;
                 if (opening) { float gl = dbToGain(g); gl += (dbToGain(target[c]) - gl) * attC; g = gainToDb(gl); holdLeft[c] = holdN; }   // open as a smooth fade in level
                 else if (holdLeft[c] > 0) { --holdLeft[c]; }
                 else {

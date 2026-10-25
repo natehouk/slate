@@ -13,19 +13,20 @@ inline const char* styleTip(int s) {
     case kVocal: return "VOCAL: a slower RMS detector, a softer knee and 4 dB of hysteresis, so the gate doesn't chatter on breaths and word endings.";
     case kGuitar: return "GUITAR: a peak detector with 8 dB of hysteresis that closes quickly once a note dies away. Tight gating for high-gain guitars.";
     case kUpward: return "UPWARD: upward expansion. Instead of turning quiet parts down, it turns parts above the threshold up, by up to Range. Adds punch and liveliness.";
+    case kDucking: return "DUCKING: the opposite of a gate. When the key rises above the threshold, the signal is turned down by up to Range; when it falls back, the signal returns. Key it from another track (Expert: Sidechain External) to duck music under a voice, or a bass under the kick.";
     default: return "";
     }
 }
 
 inline const char* paramTip(uint32_t p) {
     switch (p) {
-    case kStyle: return "The gate's character: CLASSIC, CLEAN, VOCAL, GUITAR or UPWARD (upward expansion). Hover a style for details.";
-    case kThreshold: return "The level where the gate opens. Below it the signal is turned down (by up to Range); above it the signal passes. You can also drag the dashed line in the display, or use the mouse wheel over the display.";
-    case kRatio: return "How fast the attenuation grows below the threshold. 2:1 is a gentle expander; 100:1 is a hard gate. In UPWARD style it sets how much the signal above the threshold is boosted.";
-    case kRange: return "The most the gate will turn the signal down when closed (or, in UPWARD style, the most it boosts). A small range keeps some of the background, which often sounds more natural than full silence.";
-    case kAttack: return "How fast the gate opens once the signal crosses the threshold. Very short attack keeps transients sharp; a longer attack softens them or makes swells.";
-    case kHold: return "How long the gate stays fully open after the signal drops below the threshold, before it starts to close. Stops it from chattering on decaying notes.";
-    case kRelease: return "How fast the gate closes after the hold time. Short release cuts tails off; long release lets them fade.";
+    case kStyle: return "The gate's character: CLASSIC, CLEAN, VOCAL, GUITAR, UPWARD (upward expansion) or DUCKING (turns the signal down while the key is loud). Hover a style for details.";
+    case kThreshold: return "The level where the gate opens (in DUCKING style: where ducking starts). Below it the signal is turned down (by up to Range); above it the signal passes. You can also drag the dashed line in the display, or use the mouse wheel over the display.";
+    case kRatio: return "How fast the attenuation grows below the threshold. 2:1 is a gentle expander; 100:1 is a hard gate. In UPWARD style it sets how much the signal above the threshold is boosted; in DUCKING style, how quickly the ducking deepens as the key gets louder (100:1 ducks fully as soon as it crosses).";
+    case kRange: return "The most the gate will turn the signal down when closed (or, in UPWARD style, the most it boosts; in DUCKING style, how deep it ducks). A small range keeps some of the background, which often sounds more natural than full silence.";
+    case kAttack: return "How fast the gate opens once the signal crosses the threshold. Very short attack keeps transients sharp; a longer attack softens them or makes swells. In DUCKING style: how fast the signal is turned down when the key arrives.";
+    case kHold: return "How long the gate stays fully open after the signal drops below the threshold, before it starts to close. Stops it from chattering on decaying notes. In DUCKING style: how long the signal stays down after the key stops.";
+    case kRelease: return "How fast the gate closes after the hold time. Short release cuts tails off; long release lets them fade. In DUCKING style: how fast the signal comes back.";
     case kKnee: return "How gradually the gate starts to act around the threshold. 0 dB is a hard switch; a soft knee makes the transition smoother.";
     case kLookahead: return "Lets the gate see up to 10 ms ahead, so it is already open when a sudden hit arrives and the very first transient isn't cut. Adds that much latency (reported to your host). 0 ms is zero latency.";
     case kOversampling: return "Applies the gate's gain at 2x or 4x the sample rate, with linear-phase filters. Cleaner very fast attacks and releases on high-frequency material; adds 32 or 48 samples of latency.";
@@ -41,7 +42,7 @@ inline const char* paramTip(uint32_t p) {
     case kWet: return "Expert: level of the gated signal.";
     case kDry: return "Expert: level of the original, ungated signal mixed back in (time-aligned). All the way down is off. Mix them for parallel gating.";
     case kPan: return "Expert: moves the gated (wet) signal left or right.";
-    case kMidiTrigger: return "MIDI notes open the gate: while you hold a key, the gate is fully open; let go and it closes (with hold and release). Set the threshold to 0 dB to play the gate purely from MIDI.";
+    case kMidiTrigger: return "MIDI notes open the gate: while you hold a key, the gate is fully open; let go and it closes (with hold and release). Set the threshold to 0 dB to play the gate purely from MIDI. In DUCKING style, a held note ducks the signal fully instead.";
     case kExpert: return "Shows the expert controls: external sidechain, sidechain level and filters, audition, and wet, dry and pan.";
     case kDisplayRange: return "How many dB the level display shows: 30, 60 or 90.";
     case kMidiOn: return "Turns MIDI on or off: note triggering and learned controllers.";
@@ -71,7 +72,7 @@ inline const char* targetTip(int t) {
     case kTipDisplay: return "The last ten seconds: input in grey, output in colour, the level the gate hears as a yellow line, and the gain change from the top (red: turned down, green: boosted). Drag the dashed threshold line; the mouse wheel moves it too.";
     case kTipThresholdLine: return "Drag up or down to set the threshold. The faint line below it shows where a gate with hysteresis (Vocal, Guitar) closes again.";
     case kTipMeters: return "Input, gain change and output levels. Click to reset the peak readouts.";
-    case kTipTransfer: return "Input level (across) against output level (up). The dot shows where the gate is right now. Drag sideways to move the threshold.";
+    case kTipTransfer: return "Input level (across) against output level (up); in DUCKING style, the key's level (across) against the gain applied (0 dB at the top). The dot shows where it is right now. Drag sideways to move the threshold.";
     case kTipState: return "Whether the gate is open, closing or closed right now, and by how much it is turning the signal down (or up).";
     default: return "";
     }
@@ -81,7 +82,8 @@ struct HelpPage { const char* title; const char* body; };
 static const HelpPage kHelpPages[] = {
     { "Overview",
       "Slate is a gate and expander. It turns the signal down when it falls below the threshold: removing bleed, noise and room sound between notes "
-      "and hits, tightening drums, or cutting tails short. Its UPWARD style does the opposite, lifting what rises above the threshold.\n\n"
+      "and hits, tightening drums, or cutting tails short. Its UPWARD style lifts what rises above the threshold, and its DUCKING style turns the signal "
+      "down while another track (or the signal itself) is loud.\n\n"
       "Start with a preset, then set the THRESHOLD just above the noise you want to remove (watch the yellow line in the display), "
       "and adjust RANGE, ATTACK, HOLD and RELEASE until it sounds natural.\n\n"
       "Hover over anything for a moment to see what it does." },
@@ -90,7 +92,9 @@ static const HelpPage kHelpPages[] = {
       "CLEAN: a fast peak detector, timing exactly as set. Precise; the choice for drums.\n"
       "VOCAL: slower detection, softer knee and 4 dB of hysteresis, so breaths and word endings don't make it chatter.\n"
       "GUITAR: peak detection with 8 dB of hysteresis that closes quickly as notes die away.\n"
-      "UPWARD: upward expansion. Boosts what rises above the threshold, by up to Range, for punch and life." },
+      "UPWARD: upward expansion. Boosts what rises above the threshold, by up to Range, for punch and life.\n"
+      "DUCKING: turns the signal down while the key is above the threshold. In Expert mode, set SIDECHAIN to EXTERNAL and route another track to the "
+      "plugin's sidechain input: music ducks under a voice, a bass under the kick, a pad pumps in time." },
     { "Controls",
       "THRESHOLD: where the gate opens.\nRATIO: how hard it acts below the threshold (2:1 expander, 100:1 gate).\n"
       "RANGE: how far it turns the signal down when closed.\nKNEE: how gradually it starts.\n"
