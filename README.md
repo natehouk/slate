@@ -155,7 +155,7 @@ Release checks:
 
 ## Changelog
 
-- **Unreleased:** the preset browser searches names and categories as you type, and keeps Favourites.
+- **2.1:** the preset browser searches names and categories as you type, and keeps Favourites.
 - **2.0:** DUCKING style: turns the signal down while the key is above the threshold, with its own transfer curve and gate-state readout, MIDI ducking, and seven ducking presets. Sessions and automation from 1.0 load unchanged.
 - **1.0:** First release.
 

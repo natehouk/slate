@@ -1,4 +1,4 @@
-# Slate 2.0 — User Manual
+# Slate 2.1 — User Manual
 
 Slate is a gate and expander. It turns the signal down when it falls below a threshold. Typical uses:
 

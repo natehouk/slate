@@ -304,7 +304,7 @@ protected:
         beginPath(); moveTo(19, 31); lineTo(42, 25.5f); moveTo(21, 38); lineTo(44, 32.5f); strokeColor(withAlpha(C_ACC, 0.6f)); strokeWidth(1); stroke();
         fontSize(22); textLetterSpacing(9); fillColor(C_TEXT); textAlign(ALIGN_LEFT | ALIGN_MIDDLE); text(56, 34, "SLATE", nullptr);
         fontSize(9.5f); textLetterSpacing(2.5f); fillColor(C_DIM); text(186, 29, "GATE / EXPANDER", nullptr);
-        fontSize(7); textLetterSpacing(1.1f); fillColor(C_FAINT); text(186, 41, "EPSILON AUDIO 2.0", nullptr);
+        fontSize(7); textLetterSpacing(1.1f); fillColor(C_FAINT); text(186, 41, "EPSILON AUDIO 2.1", nullptr);
         drawPresetBar();
         for (int k = 0; k < 2; ++k) {
             const float x = A_X + k * AB_W; const bool on = abSlot == k, hot = hoverHeader == 6 + k;
