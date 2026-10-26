@@ -84,6 +84,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/*/Slate*
 - Smoothed, sample-accurate automation.
 - Resizable interface.
 - **39 factory presets** in six categories, including seven ducking presets, plus user presets.
+- The preset browser **searches** names and categories as you type, and a star keeps a preset in **Favourites**.
 - **Hover tips** everywhere, a **HELP window**, and a **[full manual](docs/MANUAL.md)** (also in every release zip as `Slate-Manual.html`).
 
 ![Expert mode](screenshot-expert.png)
@@ -154,6 +155,7 @@ Release checks:
 
 ## Changelog
 
+- **Unreleased:** the preset browser searches names and categories as you type, and keeps Favourites.
 - **2.0:** DUCKING style: turns the signal down while the key is above the threshold, with its own transfer curve and gate-state readout, MIDI ducking, and seven ducking presets. Sessions and automation from 1.0 load unchanged.
 - **1.0:** First release.
 

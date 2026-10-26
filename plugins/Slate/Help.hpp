@@ -67,7 +67,7 @@ inline const char* targetTip(int t) {
     case kTipA: case kTipB: return "Slate keeps two complete settings, A and B. Click the other letter to switch and compare.";
     case kTipCopy: return "Copies the current setting to the other slot.";
     case kTipPrev: return "Load the previous preset. The mouse wheel over the preset name also steps through presets.";
-    case kTipPresets: return "Open the preset browser. A * after the name means you have changed it.";
+    case kTipPresets: return "Open the preset browser. A * after the name means you have changed it. In the browser, type to search names and categories, and click a star to keep a preset in Favourites.";
     case kTipNext: return "Load the next preset.";
     case kTipDisplay: return "The last ten seconds: input in grey, output in colour, the level the gate hears as a yellow line, and the gain change from the top (red: turned down, green: boosted). Drag the dashed threshold line; the mouse wheel moves it too.";
     case kTipThresholdLine: return "Drag up or down to set the threshold. The faint line below it shows where a gate with hysteresis (Vocal, Guitar) closes again.";
